@@ -1,6 +1,9 @@
-#include "../types/fixed_types.cpp"
+#include "../types/fixed_operations.hpp"
 #pragma once
 
+template<template<int, int> class pFixType, int pN, int pK, 
+    template<int, int> class vFixType, int vN, int vK,
+    template<int, int> class vfFixType, int vfN, int vfK>
 class FluidEmulator {
 private:
     static constexpr size_t T = 1'000'000; // количество тиков работы программы
@@ -67,8 +70,8 @@ private:
     // Структура для свапа параметров
     struct ParticleParams {
         char type;
-        Fixed cur_p;
-        std::array<Fixed, deltas.size()> v;
+        pFixType<pN, pK> cur_p;
+        std::array<vFixType<vN, vK>, deltas.size()> v;
 
         void swap_with(int x, int y) {
             std::swap(field[x][y], type);
@@ -77,13 +80,16 @@ private:
         }
     };
 
+    template<template<int, int> class FixType1, int N1, int K1>
     struct VectorField {
-        std::array<Fixed, deltas.size()> v[N][M];
-        Fixed &add(int x, int y, int dx, int dy, Fixed dv) {
-            return get(x, y, dx, dy) += dv;
+        std::array<FixType1<N1, K1>, deltas.size()> v[N][M];
+        FixType1<N1, K1> &add(int x, int y, int dx, int dy, FixType1<N1, K1> dv) {
+            FixType1<N1, K1>& ref = get(x, y, dx, dy);
+            ref = ref + dv;
+            return ref;
         }
 
-        Fixed &get(int x, int y, int dx, int dy) {
+        FixType1<N1, K1> &get(int x, int y, int dx, int dy) {
             size_t i = std::ranges::find(deltas, std::pair(dx, dy)) - deltas.begin();
             assert(i < deltas.size());
             return v[x][y][i];
@@ -92,22 +98,25 @@ private:
     
     // генератор случайных чисел типа FIXED
     std::mt19937 rnd{1337};
-    Fixed random01() {
-        return Fixed::from_raw((rnd() & ((1 << 16) - 1)));
+    pFixType<pN, pK> random01() {
+        return pFixType<pN, 0>((int)(rnd() & ((1 << 16) - 1)));
     }
 
-    static inline VectorField velocity{}, velocity_flow{};
+    static inline VectorField<vFixType, vN, vK> velocity{};
+    static inline VectorField<vfFixType, vfN, vfK> velocity_flow{};
     int last_use[N][M]{};
     int UT = 0;
-    Fixed rho[256]; // плотность веществ (сиволов) на поле field
-    static inline Fixed p[N][M]{};
-    Fixed old_p[N][M];
+    Fixed<32, 0> rho[256]; // плотность веществ (сиволов) на поле field
+    static inline pFixType<pN, pK> p[N][M]{};
+    pFixType<pN, pK> old_p[N][M];
     int dirs[N][M]{};
 
+    Fixed<64, 0> zero = Fixed<64, 0>();
+
     // Функции для работы эмулятора
-    std::tuple<Fixed, bool, std::pair<int, int>> propagate_flow(int x, int y, Fixed lim);
+    std::tuple<vfFixType<vfN, vfK>, bool, std::pair<int, int>> propagate_flow(int x, int y, vfFixType<vfN, vfK> lim);
     void propagate_stop(int x, int y, bool force = false);
-    Fixed move_prob(int x, int y);
+    pFixType<pN, pK> move_prob(int x, int y);
     bool propagate_move(int x, int y, bool is_first);
 
 

@@ -16,14 +16,14 @@ std::partial_ordering operator<=>(const FixType1<N1, K1>& a, const FixType2<N2, 
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-bool operator==(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+bool operator==(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     double value1 = get_value_as_double(a.get_v());
     double value2 = get_value_as_double(b.get_v());
     return std::abs(value1 - value2) < EPS;
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator+(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+FixType1<N1, K1> operator+(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     double value1 = get_value_as_double(a.get_v());
     double value2 = get_value_as_double(b.get_v());
     FixType1<N1, K1> buf = a.from_raw(value1 / (1 << K1) + value2 / (1 << K2));
@@ -31,7 +31,7 @@ FixType1<N1, K1> operator+(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator-(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+FixType1<N1, K1> operator-(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     double value1 = get_value_as_double(a.get_v());
     double value2 = get_value_as_double(b.get_v());
     FixType1<N1, K1> buf = a.from_raw(value1 / (1 << K1) - value2 / (1 << K2));
@@ -39,7 +39,7 @@ FixType1<N1, K1> operator-(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator*(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+FixType1<N1, K1> operator*(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     double value1 = get_value_as_double(a.get_v());
     double value2 = get_value_as_double(b.get_v());
     FixType1<N1, K1> buf = a.from_raw(value1 / (1 << K1) * value2);
@@ -47,7 +47,7 @@ FixType1<N1, K1> operator*(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator/(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+FixType1<N1, K1> operator/(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     double value1 = get_value_as_double(a.get_v());
     double value2 = get_value_as_double(b.get_v());
     FixType1<N1, K1> buf = a.from_raw(value1 / (1 << K1) / value2);
@@ -55,25 +55,25 @@ FixType1<N1, K1> operator/(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator+=(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+FixType1<N1, K1> operator+=(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     a = a + b;
     return a;
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator-=(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+FixType1<N1, K1> operator-=(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     a = a - b;
     return a;
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator*=(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+FixType1<N1, K1> operator*=(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     a = a * b;
     return a;
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator/=(FixType1<N1, K1>& a, FixType2<N2, K2>& b) {
+FixType1<N1, K1> operator/=(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     a = a / b;
     return a;
 }
@@ -86,7 +86,7 @@ FixType1<N1, K1> operator-(FixType1<N1, K1>& a) {
 }
 
 template<template<int, int> class FixType1, int N1, int K1>
-std::ostream& operator<<(std::ostream &out, FixType1<N1, K1>& a) {
+std::ostream& operator<<(std::ostream &out, const FixType1<N1, K1>& a) {
     return std::visit([&out](auto&& v_value) -> std::ostream& {
         return out << unpack(v_value) / (1 << K1);
     }, a.get_v());

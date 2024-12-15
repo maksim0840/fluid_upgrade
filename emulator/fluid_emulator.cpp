@@ -1,10 +1,12 @@
-#include "fluid_emulator.h"
+#include "fluid_emulator.hpp"
 
 
-
-std::tuple<Fixed, bool, std::pair<int, int>> FluidEmulator::propagate_flow(int x, int y, Fixed lim) {
+template<template<int, int> class pFixType, int pN, int pK, 
+    template<int, int> class vFixType, int vN, int vK,
+    template<int, int> class vfFixType, int vfN, int vfK>
+std::tuple<vfFixType<vfN, vfK>, bool, std::pair<int, int>> FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::propagate_flow(int x, int y, vfFixType<vfN, vfK> lim) {
     last_use[x][y] = UT - 1;
-    Fixed ret = 0;
+    pFixType<pN, pK> ret = 0;
     for (auto [dx, dy] : deltas) {
         int nx = x + dx, ny = y + dy;
         if (field[nx][ny] != '#' && last_use[nx][ny] < UT) {
@@ -35,12 +37,15 @@ std::tuple<Fixed, bool, std::pair<int, int>> FluidEmulator::propagate_flow(int x
     return {ret, 0, {0, 0}};
 }
 
-void FluidEmulator::propagate_stop(int x, int y, bool force) {
+template<template<int, int> class pFixType, int pN, int pK, 
+    template<int, int> class vFixType, int vN, int vK,
+    template<int, int> class vfFixType, int vfN, int vfK>
+void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::propagate_stop(int x, int y, bool force) {
     if (!force) {
         bool stop = true;
         for (auto [dx, dy] : deltas) {
             int nx = x + dx, ny = y + dy;
-            if (field[nx][ny] != '#' && last_use[nx][ny] < UT - 1 && velocity.get(x, y, dx, dy) > 0) {
+            if (field[nx][ny] != '#' && last_use[nx][ny] < UT - 1 && velocity.get(x, y, dx, dy) > zero) {
                 stop = false;
                 break;
             }
@@ -52,15 +57,18 @@ void FluidEmulator::propagate_stop(int x, int y, bool force) {
     last_use[x][y] = UT;
     for (auto [dx, dy] : deltas) {
         int nx = x + dx, ny = y + dy;
-        if (field[nx][ny] == '#' || last_use[nx][ny] == UT || velocity.get(x, y, dx, dy) > 0) {
+        if (field[nx][ny] == '#' || last_use[nx][ny] == UT || velocity.get(x, y, dx, dy) > zero) {
             continue;
         }
         propagate_stop(nx, ny);
     }
 }
 
-Fixed FluidEmulator::move_prob(int x, int y) {
-    Fixed sum = 0;
+template<template<int, int> class pFixType, int pN, int pK, 
+    template<int, int> class vFixType, int vN, int vK,
+    template<int, int> class vfFixType, int vfN, int vfK>
+pFixType<pN, pK> FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::move_prob(int x, int y) {
+    pFixType<pN, pK> sum = 0;
     for (size_t i = 0; i < deltas.size(); ++i) {
         auto [dx, dy] = deltas[i];
         int nx = x + dx, ny = y + dy;
@@ -68,7 +76,7 @@ Fixed FluidEmulator::move_prob(int x, int y) {
             continue;
         }
         auto v = velocity.get(x, y, dx, dy);
-        if (v < 0) {
+        if (v < zero) {
             continue;
         }
         sum += v;
@@ -76,15 +84,16 @@ Fixed FluidEmulator::move_prob(int x, int y) {
     return sum;
 }
 
-
-
-bool FluidEmulator::propagate_move(int x, int y, bool is_first) {
+template<template<int, int> class pFixType, int pN, int pK, 
+    template<int, int> class vFixType, int vN, int vK,
+    template<int, int> class vfFixType, int vfN, int vfK>
+bool FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::propagate_move(int x, int y, bool is_first) {
     last_use[x][y] = UT - is_first;
     bool ret = false;
     int nx = -1, ny = -1;
     do {
-        std::array<Fixed, deltas.size()> tres;
-        Fixed sum = 0;
+        std::array<pFixType<pN, pK>, deltas.size()> tres;
+        pFixType<pN, pK> sum = 0;
         for (size_t i = 0; i < deltas.size(); ++i) {
             auto [dx, dy] = deltas[i];
             int nx = x + dx, ny = y + dy;
@@ -93,7 +102,7 @@ bool FluidEmulator::propagate_move(int x, int y, bool is_first) {
                 continue;
             }
             auto v = velocity.get(x, y, dx, dy);
-            if (v < 0) {
+            if (v < zero) {
                 tres[i] = sum;
                 continue;
             }
@@ -101,17 +110,17 @@ bool FluidEmulator::propagate_move(int x, int y, bool is_first) {
             tres[i] = sum;
         }
 
-        if (sum == 0) {
+        if (sum == zero) {
             break;
         }
 
-        Fixed p = random01() * sum;
+        pFixType<pN, pK> p = random01() * sum;
         size_t d = std::ranges::upper_bound(tres, p) - tres.begin();
 
         auto [dx, dy] = deltas[d];
         nx = x + dx;
         ny = y + dy;
-        assert(velocity.get(x, y, dx, dy) > 0 && field[nx][ny] != '#' && last_use[nx][ny] < UT);
+        assert(velocity.get(x, y, dx, dy) > zero && field[nx][ny] != '#' && last_use[nx][ny] < UT);
 
         ret = (last_use[nx][ny] == UT - 1 || propagate_move(nx, ny, false));
     } while (!ret);
@@ -119,7 +128,7 @@ bool FluidEmulator::propagate_move(int x, int y, bool is_first) {
     for (size_t i = 0; i < deltas.size(); ++i) {
         auto [dx, dy] = deltas[i];
         int nx = x + dx, ny = y + dy;
-        if (field[nx][ny] != '#' && last_use[nx][ny] < UT - 1 && velocity.get(x, y, dx, dy) < 0) {
+        if (field[nx][ny] != '#' && last_use[nx][ny] < UT - 1 && velocity.get(x, y, dx, dy) < zero) {
             propagate_stop(nx, ny);
         }
     }
@@ -134,11 +143,13 @@ bool FluidEmulator::propagate_move(int x, int y, bool is_first) {
     return ret;
 }
 
-
-void FluidEmulator::emulate() {
+template<template<int, int> class pFixType, int pN, int pK, 
+    template<int, int> class vFixType, int vN, int vK,
+    template<int, int> class vfFixType, int vfN, int vfK>
+void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::emulate() {
     rho[' '] = 0.01;
     rho['.'] = 1000;
-    Fixed g = 0.1;
+    vFixType<vN, vK> g = 0.1;
 
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
@@ -149,10 +160,9 @@ void FluidEmulator::emulate() {
             }
         }
     }
-
     for (size_t i = 0; i < T; ++i) {
         
-        Fixed total_delta_p = 0;
+        pFixType<pN, pK> total_delta_p = 0;
         // Apply external forces
         for (size_t x = 0; x < N; ++x) {
             for (size_t y = 0; y < M; ++y) {
@@ -162,7 +172,6 @@ void FluidEmulator::emulate() {
                     velocity.add(x, y, 1, 0, g);
             }
         }
-
         // Apply forces from p
         memcpy(old_p, p, sizeof(p));
         for (size_t x = 0; x < N; ++x) {
@@ -182,13 +191,12 @@ void FluidEmulator::emulate() {
                         force -= contr * rho[(int) field[nx][ny]];
                         contr = 0;
                         velocity.add(x, y, dx, dy, force / rho[(int) field[x][y]]);
-                        p[x][y] -= force / dirs[x][y];
-                        total_delta_p -= force / dirs[x][y];
+                        p[x][y] -= force / pFixType<pN, pK>(dirs[x][y]);
+                        total_delta_p -= force / pFixType<pN, pK>(dirs[x][y]);
                     }
                 }
             }
         }
-
         // Make flow from velocities
         velocity_flow = {};
         bool prop = false;
@@ -199,7 +207,7 @@ void FluidEmulator::emulate() {
                 for (size_t y = 0; y < M; ++y) {
                     if (field[x][y] != '#' && last_use[x][y] != UT) {
                         auto [t, local_prop, _] = propagate_flow(x, y, 1);
-                        if (t > 0) {
+                        if (t > zero) {
                             prop = 1;
                         }
                     }
@@ -215,18 +223,18 @@ void FluidEmulator::emulate() {
                 for (auto [dx, dy] : deltas) {
                     auto old_v = velocity.get(x, y, dx, dy);
                     auto new_v = velocity_flow.get(x, y, dx, dy);
-                    if (old_v > 0) {
+                    if (old_v > zero) {
                         assert(new_v <= old_v);
                         velocity.get(x, y, dx, dy) = new_v;
                         auto force = (old_v - new_v) * rho[(int) field[x][y]];
                         if (field[x][y] == '.')
-                            force *= 0.8;
+                            force *= vFixType<vN, vK>(0.8);
                         if (field[x + dx][y + dy] == '#') {
-                            p[x][y] += force / dirs[x][y];
-                            total_delta_p += force / dirs[x][y];
+                            p[x][y] += force / pFixType<pN, pK>(dirs[x][y]);
+                            total_delta_p += force / pFixType<pN, pK>(dirs[x][y]);
                         } else {
-                            p[x + dx][y + dy] += force / dirs[x + dx][y + dy];
-                            total_delta_p += force / dirs[x + dx][y + dy];
+                            p[x + dx][y + dy] += force / pFixType<pN, pK>(dirs[x + dx][y + dy]);
+                            total_delta_p += force / pFixType<pN, pK>(dirs[x + dx][y + dy]);
                         }
                     }
                 }
