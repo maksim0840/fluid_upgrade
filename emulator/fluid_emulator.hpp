@@ -98,8 +98,8 @@ private:
     
     // генератор случайных чисел типа FIXED
     std::mt19937 rnd{1337};
-    pFixType<pN, pK> random01() {
-        return pFixType<pN, 0>((int)(rnd() & ((1 << 16) - 1)));
+    Fixed<64, 0> random01() {
+        return  Fixed<64, 0> (static_cast<double>(rnd() & ((1 << pK) - 1)) / (1 << pK));
     }
 
     static inline VectorField<vFixType, vN, vK> velocity{};

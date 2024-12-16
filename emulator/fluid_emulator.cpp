@@ -114,7 +114,7 @@ bool FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::pro
             break;
         }
 
-        pFixType<pN, pK> p = random01() * sum;
+        pFixType<pN, pK> p = sum * random01();
         size_t d = std::ranges::upper_bound(tres, p) - tres.begin();
 
         auto [dx, dy] = deltas[d];
@@ -147,9 +147,9 @@ template<template<int, int> class pFixType, int pN, int pK,
     template<int, int> class vFixType, int vN, int vK,
     template<int, int> class vfFixType, int vfN, int vfK>
 void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::emulate() {
-    rho[' '] = 0.01;
-    rho['.'] = 1000;
-    vFixType<vN, vK> g = 0.1;
+    rho[' '] = Fixed<32, 0>(0.01);
+    rho['.'] = Fixed<32, 0>(1000);
+    vFixType<vN, vK> g(0.1);
 
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
@@ -160,8 +160,7 @@ void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::emu
             }
         }
     }
-    for (size_t i = 0; i < T; ++i) {
-        
+    for (size_t i = 0; i < T; ++i) {  
         pFixType<pN, pK> total_delta_p = 0;
         // Apply external forces
         for (size_t x = 0; x < N; ++x) {

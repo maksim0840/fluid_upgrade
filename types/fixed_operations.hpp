@@ -42,7 +42,8 @@ template<template<int, int> class FixType1, int N1, int K1, template<int, int> c
 FixType1<N1, K1> operator*(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     double value1 = get_value_as_double(a.get_v());
     double value2 = get_value_as_double(b.get_v());
-    FixType1<N1, K1> buf = a.from_raw(value1 / (1 << K1) * value2);
+    int koef = (K1 >= K2) ? 1 : -1;
+    FixType1<N1, K1> buf = a.from_raw(koef * value1 / (1 << K1) * value2 / (1 << K2));
     return buf;
 }
 
@@ -50,30 +51,31 @@ template<template<int, int> class FixType1, int N1, int K1, template<int, int> c
 FixType1<N1, K1> operator/(FixType1<N1, K1> a, FixType2<N2, K2> b) {
     double value1 = get_value_as_double(a.get_v());
     double value2 = get_value_as_double(b.get_v());
-    FixType1<N1, K1> buf = a.from_raw(value1 / (1 << K1) / value2);
+    int koef = (K1 >= K2) ? 1 : -1;
+    FixType1<N1, K1> buf = a.from_raw(koef * (value1 / (1 << K1)) / (value2 / (1 << K2)));
     return buf;
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator+=(FixType1<N1, K1> a, FixType2<N2, K2> b) {
+FixType1<N1, K1> operator+=(FixType1<N1, K1>& a, FixType2<N2, K2> b) {
     a = a + b;
     return a;
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator-=(FixType1<N1, K1> a, FixType2<N2, K2> b) {
+FixType1<N1, K1> operator-=(FixType1<N1, K1>& a, FixType2<N2, K2> b) {
     a = a - b;
     return a;
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator*=(FixType1<N1, K1> a, FixType2<N2, K2> b) {
+FixType1<N1, K1> operator*=(FixType1<N1, K1>& a, FixType2<N2, K2> b) {
     a = a * b;
     return a;
 }
 
 template<template<int, int> class FixType1, int N1, int K1, template<int, int> class FixType2, int N2, int K2>
-FixType1<N1, K1> operator/=(FixType1<N1, K1> a, FixType2<N2, K2> b) {
+FixType1<N1, K1> operator/=(FixType1<N1, K1>& a, FixType2<N2, K2> b) {
     a = a / b;
     return a;
 }
