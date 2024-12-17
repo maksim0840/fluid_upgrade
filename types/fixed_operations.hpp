@@ -1,5 +1,6 @@
 #include "fixed.hpp"
 #include "fast_fixed.hpp"
+#include "float.hpp"
 #pragma once
 
 #define EPS 0.000001
