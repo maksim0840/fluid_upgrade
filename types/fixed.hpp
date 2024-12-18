@@ -14,7 +14,7 @@ struct Fixed {
     /* Конструкторы типов */
 
     template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
-    constexpr Fixed(T value, double accuracy_value = 0.0)  {
+    Fixed(T value, double accuracy_value = 0.0)  {
         // Множество размеров доступных типов (в битах)
         std::unordered_set<int> allowed_N = {sizeof(float)*CHAR_BIT, sizeof(double)*CHAR_BIT, 8, 16, 32, 64};
         // Проверка K
@@ -52,11 +52,19 @@ struct Fixed {
         }
     }
     
-    constexpr Fixed() : Fixed(0.0) {} // double = 0 по умолчанию
+    // Приведение других кастомных типов к текущему
+    template<template<int, int> class FixType1, int N1, int K1>
+    Fixed(FixType1<N1, K1> other) {
+        v_fixed = std::visit([this](auto&& v_value) -> Fixed{
+            return this->from_raw(unpack(v_value) / (1 << K1));
+        }, other.get_v()).get_v();
+    }
+
+    Fixed() : Fixed(0.0) {} // double = 0 по умолчанию
 
     // Создаёт объект Fixed из сырого значения, преобразуя его в тип текущего variant
     template<typename T>
-    constexpr Fixed from_raw(T other_value) const {
+    Fixed from_raw(T other_value) const {
         // std::visit для перебора и нахождения значения с текущим типом хранящимся в std::variant
         return std::visit([other_value](auto&& v_value) -> Fixed{
             using ValueType = std::decay_t<decltype(unpack(v_value))>; // берём тип значения ТЕКУЩЕГО объекта

@@ -16,7 +16,7 @@ std::tuple<vfFixType<vfN, vfK>, bool, std::pair<int, int>> FluidEmulator<pFixTyp
                 continue;
             }
             // assert(v >= velocity_flow.get(x, y, dx, dy));
-            auto vp = std::min(lim, cap - flow);
+            auto vp = std::min(lim, vfFixType<vfN, vfK>(cap - flow));
             if (last_use[nx][ny] == UT - 1) {
                 velocity_flow.add(x, y, dx, dy, vp);
                 last_use[x][y] = UT;
@@ -146,10 +146,14 @@ bool FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::pro
 template<template<int, int> class pFixType, int pN, int pK, 
     template<int, int> class vFixType, int vN, int vK,
     template<int, int> class vfFixType, int vfN, int vfK>
-void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::emulate() {
-    rho[' '] = Fixed<32, 0>(0.01);
-    rho['.'] = Fixed<32, 0>(1000);
-    vFixType<vN, vK> g(0.1);
+void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::emulate(const std::string& save_ticks, const int load_tick) {
+    StartValues start_values = get_start_values();
+
+    rho[' '] = Fixed<32, 0>(start_values.rho_space);
+    rho['.'] = Fixed<32, 0>(start_values.rho_dot);
+    vFixType<vN, vK> g(start_values.g);
+
+    bool save = (save_ticks != "");
 
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
