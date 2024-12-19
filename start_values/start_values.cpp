@@ -1,27 +1,11 @@
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <iostream>
-#include <stdexcept>
+#include "start_values.hpp"
 
-struct StartValues {
-    double rho_space;
-    double rho_dot;
-    double g;
-    int N;
-    int M;
-    std::vector<std::string> field;
-};
-
-StartValues get_start_values(void) {
+StartValues get_start_values(const std::string& filename) {
     StartValues start_values;
     
-    std::string filename = "start_values/start_file";
     std::ifstream file(filename);
     if (!file.is_open()) {
-        throw "cannot open the file";
+        throw std::ios_base::failure("Cant open start file\n");
     }
     
     std::string line;

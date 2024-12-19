@@ -1,6 +1,7 @@
 
-#include "macro_params.h"
-
+#include "macro_params.hpp"
+#define START_VALUES_FILE "../start_values/start_file"
+#define SAVE_TICKS_FILE "../emulator/saved_ticks"
 
 // Рекурсивный constexpr цикл для перебора i, j, k
 template <typename Func, int I = 0, int J = 0, int K = 0>
@@ -37,7 +38,7 @@ void start_fluid(const Params& params) {
         constexpr int i_val = decltype(i)::value;
         constexpr int j_val = decltype(j)::value;
         constexpr int k_val = decltype(k)::value;
-        IF_CREATE_EMULATOR(p, v, vf, i_val, j_val, k_val, allowed_types, allowed_N, allowed_K, p_NK, v_NK, vf_NK, params.save_tick, params.load_tick);
+        IF_CREATE_EMULATOR(p, v, vf, i_val, j_val, k_val, allowed_types, allowed_N, allowed_K, p_NK, v_NK, vf_NK, params.save_tick, params.load_tick, START_VALUES_FILE, SAVE_TICKS_FILE);
     });
 
     throw std::runtime_error("Incorrect type for emulator");
