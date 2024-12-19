@@ -25,19 +25,20 @@ StartValues get_start_values(void) {
     }
     
     std::string line;
-    std::getline(file, line); // Пропустить первую строку (комментарий)
+    std::getline(file, line); // пропустить первую строку-пояснение
 
     while (std::getline(file, line)) {
         if (line.empty()) continue; // пропустить пустую строку
 
-        // Находим позицию '=' для получения значений
-        size_t equalPos = line.find('=');
-        size_t semicolonPos = line.find(';');
-        if (equalPos != std::string::npos && semicolonPos != std::string::npos) {
-            std::string key = line.substr(0, equalPos);
-            std::string value = line.substr(equalPos + 1, semicolonPos - equalPos - 1);
+        // Находим опорные позиции для получения значений
+        size_t equal_pos = line.find('=');
+        size_t end_pos = line.find(';');
 
-            // Удаляем пробелы и пробелы вокруг значения
+        if (equal_pos != std::string::npos && end_pos != std::string::npos) {
+            std::string key = line.substr(0, equal_pos);
+            std::string value = line.substr(equal_pos + 1, end_pos - equal_pos - 1);
+
+            // Удаляем пробелы
             value.erase(std::remove_if(value.begin(), value.end(), isspace), value.end());
 
             // Считываем значения
@@ -51,7 +52,11 @@ StartValues get_start_values(void) {
                 start_values.N = std::stoi(value);
             else if (key == "M")
                 start_values.M = std::stoi(value);
-        } else if (line[0] == '\"' && line[line.size() - 1] == '\"') {
+        }
+        else if (line[0] == '\"' && line[line.size() - 1] == '\"') {
+            if (line.size() > 1 && line.front() == '"' && line.back() == '"') {
+                line = line.substr(1, line.size() - 2); // Удаляем первый и последний символ "
+            }
             start_values.field.push_back(line);
         }
     }

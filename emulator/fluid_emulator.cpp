@@ -1,5 +1,5 @@
 #include "fluid_emulator.hpp"
-
+#include <fstream>
 
 template<template<int, int> class pFixType, int pN, int pK, 
     template<int, int> class vFixType, int vN, int vK,
@@ -143,17 +143,213 @@ bool FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::pro
     return ret;
 }
 
+
 template<template<int, int> class pFixType, int pN, int pK, 
     template<int, int> class vFixType, int vN, int vK,
     template<int, int> class vfFixType, int vfN, int vfK>
-void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::emulate(const std::string& save_ticks, const int load_tick) {
+void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::save_tick_params(int tick, const std::string& filename) {
+    // Открываем файл в режиме добавления в конец
+    std::ofstream out(filename, std::ios::binary | std::ios::app);
+    if (!out.is_open()) {
+        throw std::ios_base::failure("Cant open binary table file\n");
+    }
+
+    size_t param_size;
+
+    // Сохраняем tick
+    param_size = sizeof(tick);
+    out.write(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    out.write(reinterpret_cast<char*>(&tick), param_size);
+    
+    // Сохраняем field
+    size_t field_size = field.size(); // кол-во строк в векторе
+    size_t row_size = (field[0]).size();  // размер строки
+    param_size = field_size * (row_size + sizeof(row_size));  // размер всех строк + размер указанныех размеров строк
+    out.write(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (const auto& row : field) {
+        out.write(reinterpret_cast<char*>(&row_size), sizeof(row_size));  // записываем длину строки
+        out.write(row.c_str(), row_size);  // записываем содержимое строки
+    }
+    // Сохраняем p
+    param_size = sizeof(p);
+    out.write(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            out.write(reinterpret_cast<char*>(&p[x][y]), sizeof(pFixType<pN, pK>));
+        }
+    }
+    // Сохраняем old_p
+    param_size = sizeof(old_p);
+    out.write(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            out.write(reinterpret_cast<char*>(&old_p[x][y]), sizeof(pFixType<pN, pK>));
+        }
+    }
+    // Сохраняем velocity
+    param_size = sizeof(velocity);
+    out.write(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            for (size_t i = 0; i < deltas.size(); ++i) {
+                out.write(reinterpret_cast<char*>(&velocity.v[x][y][i]), sizeof(vFixType<vN, vK>));
+            }
+        }
+    }
+    // Сохраняем velocity_flow
+    param_size = sizeof(velocity_flow);
+    out.write(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            for (size_t i = 0; i < deltas.size(); ++i) {
+                out.write(reinterpret_cast<char*>(&velocity_flow.v[x][y][i]), sizeof(vfFixType<vfN, vfK>));
+            }
+        }
+    }
+    // Сохраняем last_use
+    param_size = sizeof(last_use);
+    out.write(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            out.write(reinterpret_cast<char*>(&last_use[x][y]), sizeof(int));
+        }
+    }
+    // Сохраняем UT
+    param_size = sizeof(UT);
+    out.write(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    out.write(reinterpret_cast<char*>(&UT), param_size);
+    
+    // Закрываем файл
+    out.close();
+}
+
+
+template<template<int, int> class pFixType, int pN, int pK, 
+    template<int, int> class vFixType, int vN, int vK,
+    template<int, int> class vfFixType, int vfN, int vfK>
+void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::load_tick_params(int& tick, const std::string& filename) {
+// Открываем файл в бинарном режиме для чтения
+    std::ifstream in(filename, std::ios::binary);
+    if (!in.is_open()) {
+        throw std::ios_base::failure("Can't open saved_ticks file for reading.");
+    }
+
+    size_t param_size;
+    int current_tick = 0;
+
+    // Ищем первый тик, который >= заданного tick
+    while (1) {
+
+        // Завершаем чтение если достигли конца
+        if(!in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size))) {
+            tick = 0;
+            in.close();
+            std::cout << "___CANNOT FIND TICK, START WITH 0___\n";
+            return;
+        }
+
+        // Читаем номер текущего тика
+        in.read(reinterpret_cast<char*>(&current_tick), param_size);
+
+        // Переходим к сохранению параметров
+        if (current_tick >= tick) {
+            tick = current_tick;
+            break;
+        }
+
+        // Скипаем 7 других параметрво помимо tick
+        for (int i = 0; i < 7; ++i) {
+            in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+            in.ignore(param_size);
+        }
+    }
+
+    // Загружаем field
+    in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t i = 0; i < N; ++i) {
+        in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+        in.read(&field[i][0], param_size);
+    }
+    // Загружаем p
+    in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            in.read(reinterpret_cast<char*>(&p[x][y]), sizeof(pFixType<pN, pK>));
+        }
+    }
+    // Загружаем old_p
+    in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            in.read(reinterpret_cast<char*>(&old_p[x][y]), sizeof(pFixType<pN, pK>));
+        }
+    }
+    // Загружаем velocity
+    in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            for (size_t i = 0; i < deltas.size(); ++i) {
+                in.read(reinterpret_cast<char*>(&velocity.v[x][y][i]), sizeof(vFixType<vN, vK>));
+            }
+        }
+    }
+    // Загружаем velocity_flow
+    in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            for (size_t i = 0; i < deltas.size(); ++i) {
+                in.read(reinterpret_cast<char*>(&velocity_flow.v[x][y][i]), sizeof(vfFixType<vfN, vfK>));
+            }
+        }
+    }
+    // Загружаем last_use
+    in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    for (size_t x = 0; x < N; ++x) {
+        for (size_t y = 0; y < M; ++y) {
+            in.read(reinterpret_cast<char*>(&last_use[x][y]), sizeof(int));
+        }
+    }
+    // Загружаем UT
+    in.read(reinterpret_cast<char*>(&param_size), sizeof(param_size));
+    in.read(reinterpret_cast<char*>(&UT), param_size);
+
+    // Закрываем файл
+    in.close();
+}
+
+
+template<template<int, int> class pFixType, int pN, int pK, 
+    template<int, int> class vFixType, int vN, int vK,
+    template<int, int> class vfFixType, int vfN, int vfK>
+void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::emulate(int save_tick, int load_tick) {
+
+    // Получаем значения из файла
     StartValues start_values = get_start_values();
 
     rho[' '] = Fixed<32, 0>(start_values.rho_space);
     rho['.'] = Fixed<32, 0>(start_values.rho_dot);
     vFixType<vN, vK> g(start_values.g);
+    if (!(start_values.N == N && start_values.M == M)) {
+        throw std::runtime_error("unequal emulator and input field sizes");
+    }
+    field = start_values.field;
 
-    bool save = (save_ticks != "");
+    std::string saved_ticks_filename ="emulator/saved_ticks";
+
+    // Загружаемся с нужного тика
+    if (load_tick != 0) {
+        load_tick_params(load_tick, saved_ticks_filename);
+    }
+
+    // Определяем режим сохранения значений
+    if (save_tick != 0) {
+        // перезапись файла
+        std::ofstream out(saved_ticks_filename, std::ios::binary | std::ios::trunc);
+        if (!out.is_open()) {
+            throw std::ios_base::failure("сannot open saved_ticks file for clearing.");
+        }
+        out.close();
+    }
 
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
@@ -260,7 +456,15 @@ void FluidEmulator<pFixType, pN, pK, vFixType, vN, vK, vfFixType, vfN, vfK>::emu
         }
 
         if (prop) {
-            std::cout << "Tick " << i << ":\n";
+            int cur_tick = (load_tick != 0) ? (load_tick + i) : (i);
+
+             // Сохраняем тик
+            if ((save_tick != 0) && (cur_tick % save_tick == 0)) {
+                save_tick_params(cur_tick, saved_ticks_filename);
+                std::cout << "\n\n TICK WAS SAVED \n\n";
+            }
+    
+            std::cout << "Tick " << cur_tick << ":\n";
             for (size_t x = 0; x < N; ++x) {
                 std::cout << field[x] << "\n";
             }

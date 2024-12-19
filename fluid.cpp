@@ -33,13 +33,11 @@ void start_fluid(const Params& params) {
     constexpr auto allowed_N = get_allowed_N();
     constexpr auto allowed_K = get_allowed_K();
 
-    std::string save_ticks = "emulator/" + params.save_ticks;
-
     constexpr_triple_loop([&](auto i, auto j, auto k) {
         constexpr int i_val = decltype(i)::value;
         constexpr int j_val = decltype(j)::value;
         constexpr int k_val = decltype(k)::value;
-        IF_CREATE_EMULATOR(p, v, vf, i_val, j_val, k_val, allowed_types, allowed_N, allowed_K, p_NK, v_NK, vf_NK, save_ticks, params.load_tick);
+        IF_CREATE_EMULATOR(p, v, vf, i_val, j_val, k_val, allowed_types, allowed_N, allowed_K, p_NK, v_NK, vf_NK, params.save_tick, params.load_tick);
     });
 
     throw std::runtime_error("Incorrect type for emulator");

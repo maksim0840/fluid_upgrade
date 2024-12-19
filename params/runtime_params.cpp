@@ -10,7 +10,7 @@ struct Params {
     std::string p_type; // тип для p
     std::string v_type; // тип для velocity
     std::string v_flow_type; // тип для velocity_flow
-    std::string save_ticks; // путь до файла, куда будут сохранятся значения для загрузки
+    int save_tick; // сохраняет каждый n-ый тик (если текущий номер тика кратен save_tick)
     int load_tick; // минимальный номер тика, с которого начать (программа начнёт с минимального тика, который >= load_tick)
 };
 
@@ -42,7 +42,7 @@ Params get_runtime_params(int argc, char* argv[]) {
     // поиск по аргументам командной строки
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        // проверяем наличие "--"
+
         if (arg.rfind("--", 0) != 0) {
             continue;
         }
@@ -76,15 +76,14 @@ Params get_runtime_params(int argc, char* argv[]) {
         p.v_flow_type = DEFAULT_TYPE;
     }
 
-    if (args.find("save_ticks") != args.end()) {
-        std::string val = args["save_ticks"];
-        p.save_ticks = convert_type(args["save_ticks"]);
+    if (args.find("save-tick") != args.end()) {
+        p.save_tick = std::stoi(args["save-tick"]);
     } else {
-        p.save_ticks = "";
+        p.save_tick = 0;
     }
 
-    if (args.find("load_tick") != args.end()) {
-        p.load_tick = std::stoi(args["load_tick"]);
+    if (args.find("load-tick") != args.end()) {
+        p.load_tick = std::stoi(args["load-tick"]);
     } else {
         p.load_tick = 0;
     }
