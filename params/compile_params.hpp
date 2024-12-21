@@ -5,13 +5,6 @@
 
 #pragma once
 
-
-// макросы для типов
-#define FAST_FIXED(N, K) fastfixed(N, K)
-#define FIXED(N, K) fixed(N, K)
-#define FLOAT float(32, 0)
-#define DOUBLE float(64, 0)
-
 // макросы для преобразования
 #define STRINGIFY(x) #x
 #define EXPAND_AND_STRINGIFY(x) STRINGIFY(x)
@@ -23,13 +16,16 @@ constexpr std::string_view DTYPES = EXPAND_AND_STRINGIFY(TYPES);
 constexpr std::string_view DTYPES = "float(64,0)";
 #endif
 
-// удаление начальных и конечных скобок и кавычек
-constexpr std::string_view trim_brackets(std::string_view input) {
+// удаление лишних символов
+constexpr std::string_view string_preprocessing(std::string_view input) {
     if (input.front() == '"' && input.back() == '"') {
         input = input.substr(1, input.size() - 2);
     }
     if (input.front() == '(' && input.back() == ')') {
-        return input.substr(1, input.size() - 2);
+        input = input.substr(1, input.size() - 2);
+    }
+    if (input.front() == '\'' && input.back() == '\'') {
+        input = input.substr(1, input.size() - 2);
     }
     return input;
 }
@@ -48,7 +44,7 @@ constexpr int calculate_dtypes_size(std::string_view input) {
     return count;
 }
 
-constexpr int DTYPES_SIZE = calculate_dtypes_size(trim_brackets(DTYPES)); // определение DTYPES_SIZE (кол-во типов)
+constexpr int DTYPES_SIZE = calculate_dtypes_size(DTYPES); // определение DTYPES_SIZE (кол-во типов)
 
 // constexpr функция для парсинга целого числа из строки
 constexpr int parse_int(std::string_view str) {
@@ -72,14 +68,14 @@ constexpr std::string_view transform_type_name(std::string_view type_name) {
 
 // функция для парсинга строки DTYPES в массив std::tuple
 constexpr auto parse_dtypes(std::string_view input) {
-    input = trim_brackets(input);
+    input = string_preprocessing(input);
     std::array<std::tuple<std::string_view, int, int>, DTYPES_SIZE> result{};
 
     size_t pos = 0;
     size_t idx = 0;
 
     while (pos < input.size() && idx < DTYPES_SIZE) {
-        size_t start = input.find_first_not_of(" ,", pos);
+        size_t start = input.find_first_not_of(", ", pos);
         if (start == std::string_view::npos) break;
 
         size_t open_bracket = input.find('(', start);
@@ -102,8 +98,8 @@ constexpr auto parse_dtypes(std::string_view input) {
             if (end == std::string_view::npos) end = input.size();
 
             std::string_view type_name = input.substr(start, end - start);
-            int n = 32, k = 0; // Значения по умолчанию
-
+            
+            int n, k;
             if (type_name == "DOUBLE") {
                 n = 64; k = 0; 
             } else if (type_name == "FLOAT") {
